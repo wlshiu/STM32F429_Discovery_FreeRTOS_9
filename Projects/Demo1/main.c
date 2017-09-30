@@ -28,7 +28,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
-
+#include "queue.h"
 
 /** @addtogroup STM32F4_Discovery_Peripheral_Examples
   * @{
@@ -59,6 +59,60 @@ void ToggleLED2_Task(void*);
   * @param  None
   * @retval None
   */
+//张照博自己写的--START
+int32_t Send_Sum=0;
+int32_t Received_Sum=0;
+void Sender_Task(void *pvParameters)
+{
+  int32_t Send_Num = 1; 
+  
+    for( ;; )  
+    {  
+        vTaskDelay( 2/portTICK_RATE_MS );  
+        if (Send_Num>10000)
+        {
+          Send_Num=1;
+        }
+        /* 向队列中填充内容 */  
+        xQueueSend( MyQueue, ( void* )&Send_Num, 0 );   
+        *((int32_t*)pvParameters)+=Send_Sum;
+        Send_Num++; 
+}
+
+void Receiver_Task(void *pvParameters)
+{
+  int32_t  Received_Num = 0;  
+    for( ;; )  
+    {  
+        /* 从队列中获取内容 */  
+        if( xQueueReceive( MyQueue, &Received_Num, 1000/portTICK_RATE_MS ) == pdPASS)  
+        {  
+          Received_Num+=Received_Num;
+          *((int32_t*)pvParameters)=Received_Num;
+        }  
+    }  
+}
+
+void Monitor_Task(void *pvParameters)
+{
+  vTaskDelay( 10000/portTICK_RATE_MS );  
+  if(Send_Sum==Received_Sum)
+    {
+      Send_Sum=0;
+      Received_Sum=0;
+      return;
+    } 
+  else 
+    {
+      Send_Sum=0;
+      Received_Sum=0;
+    }
+}
+
+//张照博自己写的--END
+
+
+
 int main(void)
 {
   /*!< At this stage the microcontroller clock setting is already configured, 
@@ -68,40 +122,53 @@ int main(void)
         system_stm32f4xx.c file
      */
        Hardware_Init();
- 
-       /* Init and start tracing*/
-        vTraceEnable(TRC_INIT);
-        vTraceEnable(TRC_START);
+ //我的第一次调试，需要去掉前面的
+ //       /* Init and start tracing*/
+ //        vTraceEnable(TRC_INIT);
+ //        vTraceEnable(TRC_START);
 
-       /* Create tasks */
-       xTaskCreate(
-		  ToggleLED1_Task,                 /* Function pointer */
-		  "Task_LED1",                          /* Task name - for debugging only*/
-		  configMINIMAL_STACK_SIZE,         /* Stack depth in words */
-		  (void*) NULL,                     /* Pointer to tasks arguments (parameter) */
-		  tskIDLE_PRIORITY + 3UL,           /* Task priority*/
-		  NULL                              /* Task handle */
-       );
+ //       /* Create tasks */
+ //       xTaskCreate(
+	// 	  ToggleLED1_Task,                 /* Function pointer */
+	// 	  "Task_LED1",                          /* Task name - for debugging only*/
+	// 	  configMINIMAL_STACK_SIZE,         /* Stack depth in words */
+	// 	  (void*) NULL,                     /* Pointer to tasks arguments (parameter) */
+	// 	  tskIDLE_PRIORITY + 3UL,           /* Task priority*/
+	// 	  NULL                              /* Task handle */
+ //       );
 
-       xTaskCreate(
-		  ToggleLED2_Task,                 /* Function pointer */
-		  "Task_LED2",                          /* Task name - for debugging only*/
-		  configMINIMAL_STACK_SIZE,         /* Stack depth in words */
-		  (void*) NULL,                     /* Pointer to tasks arguments (parameter) */
-		  tskIDLE_PRIORITY + 2UL,           /* Task priority*/
-		  NULL                              /* Task handle */
-       );
+ //       xTaskCreate(
+	// 	  ToggleLED2_Task,                 /* Function pointer */
+	// 	  "Task_LED2",                           Task name - for debugging only
+	// 	  configMINIMAL_STACK_SIZE,         /* Stack depth in words */
+	// 	  (void*) NULL,                     /* Pointer to tasks arguments (parameter) */
+	// 	  tskIDLE_PRIORITY + 2UL,           /* Task priority*/
+	// 	  NULL                              /* Task handle */
+ //       );
 
-	/* Start the scheduler. */
-	vTaskStartScheduler();
+	// /* Start the scheduler. */
+	// vTaskStartScheduler();
 
-	/* If all is well, the scheduler will now be running, and the following line
-	will never be reached.  If the following line does execute, then there was
-	insufficient FreeRTOS heap memory available for the idle and/or timer tasks
-	to be created.  See the memory management section on the FreeRTOS web site
-	for more details. */
-	for( ;; );
+	// /* If all is well, the scheduler will now be running, and the following line
+	// will never be reached.  If the following line does execute, then there was
+	// insufficient FreeRTOS heap memory available for the idle and/or timer tasks
+	// to be created.  See the memory management section on the FreeRTOS web site
+	// for more details. */
+	// for( ;; );
+//我的第一次调试，去掉的位置结尾
 
+    // 初始化硬件平台  
+    prvSetupHardware();  
+    //创建全局变量
+    //建立队列 
+    MyQueue = xQueueCreate( 510 , sizeof( int32_t ) );  
+    // 建立任务  
+    xTaskCreate( Sender_Task, ( signed portCHAR * ) "Sender_Task", configMINIMAL_STACK_SIZE,(void*)&Send_Sum, tskIDLE_PRIORITY+3, NULL );  
+    xTaskCreate( Receiver_Task, ( signed portCHAR * ) "Receiver_Task", configMINIMAL_STACK_SIZE,(void*)&Received_Sum, tskIDLE_PRIORITY+4, NULL );   
+  xTaskCreate( Monitor_Task, ( signed portCHAR * ) "Monitor_Task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY+5, NULL ); 
+  //启动OS  
+    vTaskStartScheduler();  
+    return 0; 
 }
 
 
