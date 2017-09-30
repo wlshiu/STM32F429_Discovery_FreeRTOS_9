@@ -68,7 +68,7 @@ void Sender_Task(void *pvParameters)
   
     for( ;; )  
     {  
-        vTaskDelay( 2/portTICK_RATE_MS );  
+        vTaskDelay( 2 / portTICK_RATE_MS );
         if (Send_Num>10000)
         {
           Send_Num=1;
@@ -85,7 +85,7 @@ void Receiver_Task(void *pvParameters)
     for( ;; )  
     {  
         /* 从队列中获取内容 */  
-        if( xQueueReceive( MyQueue, &Received_Num, 1000/portTICK_RATE_MS ) == pdPASS)  
+        if( xQueueReceive( MyQueue, &Received_Num, 1000 / portTICK_RATE_MS ) == pdPASS)  
         {  
           Received_Num+=Received_Num;
           *((int32_t*)pvParameters)=Received_Num;
@@ -95,7 +95,7 @@ void Receiver_Task(void *pvParameters)
 
 void Monitor_Task(void *pvParameters)
 {
-  vTaskDelay( 10000/portTICK_RATE_MS );  
+  vTaskDelay( 10000 / portTICK_RATE_MS );  
   if(Send_Sum==Received_Sum)
     {
       Send_Sum=0;
