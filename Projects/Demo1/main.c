@@ -100,21 +100,26 @@ void Receiver_Task(void *pvParameters)
 
 void Monitor_Task(void *pvParameters)
 {
-  vTaskDelay( 2000 / portTICK_RATE_MS );  
-  if(Send_Sum==Received_Sum)
+for(;;)
+  {
+
+  vTaskDelay( 10000 / portTICK_RATE_MS ); 
+   Green_LED_Off();
+  if(Send_Sum=Received_Sum)
     {
       Green_LED_On();
-      //Red_LED_Off(NULL);
+      Red_LED_Off();
       Send_Sum=0;
       Received_Sum=0;
     } 
   else 
     {
-     // Green_LED_Off(NULL);
+      Green_LED_Off();
       Red_LED_On();
       Send_Sum=0;
       Received_Sum=0;
     }
+  }
 }
 
 //张照博自己写的--END
