@@ -59,13 +59,16 @@ void ToggleLED2_Task(void*);
   * @param  None
   * @retval None
   */
+
+
 //张照博自己写的--START
 int32_t Send_Sum=0;
 int32_t Received_Sum=0;
+   //建立队列 
+xQueueHandle MyQueue; 
 void Sender_Task(void *pvParameters)
 {
-  int32_t Send_Num = 1; 
-  
+    int32_t Send_Num = 1; 
     for( ;; )  
     {  
         vTaskDelay( 2 / portTICK_RATE_MS );
@@ -74,9 +77,10 @@ void Sender_Task(void *pvParameters)
           Send_Num=1;
         }
         /* 向队列中填充内容 */  
-        xQueueSend( MyQueue, ( void* )&Send_Num, 0 );   
+        xQueueSendToBack( MyQueue, ( void* )&Send_Num, 0 );   
         *((int32_t*)pvParameters)+=Send_Sum;
         Send_Num++; 
+     }
 }
 
 void Receiver_Task(void *pvParameters)
@@ -85,33 +89,35 @@ void Receiver_Task(void *pvParameters)
     for( ;; )  
     {  
         /* 从队列中获取内容 */  
-        if( xQueueReceive( MyQueue, &Received_Num, 1000 / portTICK_RATE_MS ) == pdPASS)  
+        if( xQueueReceive( MyQueue, &Received_Num, 1000 / portTICK_RATE_MS ) == pdTRUE)  
         {  
-          Received_Num+=Received_Num;
-          *((int32_t*)pvParameters)=Received_Num;
+          
+          *((int32_t*)pvParameters)+=Received_Num;
+           Received_Num=*((int32_t*)pvParameters);
         }  
     }  
 }
 
 void Monitor_Task(void *pvParameters)
 {
-  vTaskDelay( 10000 / portTICK_RATE_MS );  
+  vTaskDelay( 2000 / portTICK_RATE_MS );  
   if(Send_Sum==Received_Sum)
     {
+      Green_LED_On();
+      //Red_LED_Off(NULL);
       Send_Sum=0;
       Received_Sum=0;
-      return;
     } 
   else 
     {
+     // Green_LED_Off(NULL);
+      Red_LED_On();
       Send_Sum=0;
       Received_Sum=0;
     }
 }
 
 //张照博自己写的--END
-
-
 
 int main(void)
 {
@@ -121,11 +127,22 @@ int main(void)
        To reconfigure the default setting of SystemInit() function, refer to
         system_stm32f4xx.c file
      */
-       Hardware_Init();
- //我的第一次调试，需要去掉前面的
- //       /* Init and start tracing*/
- //        vTraceEnable(TRC_INIT);
- //        vTraceEnable(TRC_START);
+    Hardware_Init();
+    // 初始化硬件平台  
+    //prvSetupHardware();  
+    //创建全局变量
+ MyQueue = xQueueCreate( 510 , sizeof( int32_t ) ); 
+    // 建立任务  
+    xTaskCreate( Sender_Task, ( signed portCHAR * ) "Sender_Task", configMINIMAL_STACK_SIZE,(void*)&Send_Sum, tskIDLE_PRIORITY+3, NULL );  
+    xTaskCreate( Receiver_Task, ( signed portCHAR * ) "Receiver_Task", configMINIMAL_STACK_SIZE,(void*)&Received_Sum, tskIDLE_PRIORITY+4, NULL );   
+    xTaskCreate( Monitor_Task, ( signed portCHAR * ) "Monitor_Task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY+5, NULL ); 
+  //启动OS  
+    vTaskStartScheduler();  
+    return 0; 
+ //我的第一次调试，需要去掉后面的
+       /* Init and start tracing*/
+         vTraceEnable(TRC_INIT);
+         vTraceEnable(TRC_START);
 
  //       /* Create tasks */
  //       xTaskCreate(
@@ -157,18 +174,7 @@ int main(void)
 	// for( ;; );
 //我的第一次调试，去掉的位置结尾
 
-    // 初始化硬件平台  
-    prvSetupHardware();  
-    //创建全局变量
-    //建立队列 
-    MyQueue = xQueueCreate( 510 , sizeof( int32_t ) );  
-    // 建立任务  
-    xTaskCreate( Sender_Task, ( signed portCHAR * ) "Sender_Task", configMINIMAL_STACK_SIZE,(void*)&Send_Sum, tskIDLE_PRIORITY+3, NULL );  
-    xTaskCreate( Receiver_Task, ( signed portCHAR * ) "Receiver_Task", configMINIMAL_STACK_SIZE,(void*)&Received_Sum, tskIDLE_PRIORITY+4, NULL );   
-  xTaskCreate( Monitor_Task, ( signed portCHAR * ) "Monitor_Task", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY+5, NULL ); 
-  //启动OS  
-    vTaskStartScheduler();  
-    return 0; 
+
 }
 
 
