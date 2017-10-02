@@ -105,7 +105,7 @@ for(;;)
 
   vTaskDelay( 10000 / portTICK_RATE_MS ); 
    Green_LED_Off();
-  if(Send_Sum=Received_Sum)
+  if(Send_Sum==Received_Sum)
     {
       Green_LED_On();
       Red_LED_Off();
